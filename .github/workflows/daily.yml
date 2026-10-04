@@ -1,0 +1,36 @@
+name: Genshin daily
+
+on:
+  schedule:
+    - cron: "0 22 * * *" # 매일 07:00 KST
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: Check in + redeem
+        run: uv run checkin.py
+        env:
+          STOKEN: ${{ secrets.STOKEN }}
+          LTUID_V2: ${{ secrets.LTUID_V2 }}
+          LTMID_V2: ${{ secrets.LTMID_V2 }}
+          LTOKEN_V2: ${{ secrets.LTOKEN_V2 }}
+          COOKIE_TOKEN_V2: ${{ secrets.COOKIE_TOKEN_V2 }}
+          GENSHIN_UID: ${{ secrets.GENSHIN_UID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+  keepalive: # 60일 무활동 시 스케줄이 꺼지는 것 방지
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@f72ff1a1336129f29bf0166c0fd0ca6cf1bcb38c # v1
