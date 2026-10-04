@@ -71,10 +71,10 @@ async def redeem_all(client: genshin.Client, uid: int) -> tuple[list[str], list[
                 await client.redeem_code(code, uid)
                 redeemed.append(f"{code} ({c.get('rewards') or '보상 정보 없음'})")
                 print(f"[redeem] {code}: 성공")
-            except genshin.RedemptionCooldown:
+            except genshin.errors.RedemptionCooldown:
                 await asyncio.sleep(REDEEM_INTERVAL * 2)
                 continue
-            except (genshin.RedemptionClaimed, genshin.RedemptionInvalid, genshin.RedemptionRegionLock) as e:
+            except (genshin.errors.RedemptionClaimed, genshin.errors.RedemptionInvalid, genshin.errors.RedemptionRegionLock) as e:
                 print(f"[redeem] {code}: {type(e).__name__}")
             except genshin.InvalidCookies:
                 raise

@@ -28,10 +28,11 @@ KEYS = [
 
 def save(**values: str | None) -> None:
     ENV.touch(exist_ok=True)
+    existing = dotenv_values(ENV)
     for key, value in values.items():
         if value:
             set_key(ENV, key, value, quote_mode="never")
-        elif value is None:
+        elif value is None and key in existing:
             unset_key(ENV, key, quote_mode="never")
 
 
