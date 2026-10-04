@@ -3,6 +3,7 @@
 import asyncio
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
 import aiohttp
 import genshin
@@ -10,6 +11,7 @@ from genshin.client.manager.cookie import fetch_cookie_with_stoken_v2
 
 CODES_API = "https://hoyo-codes.seria.moe/codes?game=genshin"
 REDEEM_INTERVAL = 6  # 코드 입력 사이 쿨다운(초)
+KST = timezone(timedelta(hours=9))
 
 
 def env(name: str) -> str:
@@ -62,28 +64,46 @@ async def fetch_codes() -> list[dict]:
     return [c for c in data.get("codes", []) if c.get("status") == "OK"]
 
 
-async def redeem_all(client: genshin.Client, uid: int) -> tuple[list[str], list[str]]:
-    redeemed, errors = [], []
-    for c in await fetch_codes():
+def kst_now() -> str:
+    return datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+
+
+def format_rewards(rewards: str) -> str:
+    """'Primogem*30;Mora*20000' -> 'Primogem x30, Mora x20000'"""
+    return ", ".join(r.replace("*", " x") for r in rewards.split(";") if r) or "보상 정보 없음"
+
+
+async def redeem_all(client: genshin.Client, uid: int) -> dict:
+    result = {"total": 0, "new": [], "claimed": 0, "skipped": 0, "errors": []}
+    codes = await fetch_codes()
+    result["total"] = len(codes)
+    for c in codes:
         code = c["code"]
         for attempt in range(3):
             try:
                 await client.redeem_code(code, uid)
-                redeemed.append(f"{code} ({c.get('rewards') or '보상 정보 없음'})")
+                result["new"].append(f"{kst_now()} {code} → {format_rewards(c.get('rewards', ''))}")
                 print(f"[redeem] {code}: 성공")
             except genshin.errors.RedemptionCooldown:
+                print(f"[redeem] {code}: 쿨다운, 재시도 {attempt + 1}/3")
                 await asyncio.sleep(REDEEM_INTERVAL * 2)
                 continue
-            except (genshin.errors.RedemptionClaimed, genshin.errors.RedemptionInvalid, genshin.errors.RedemptionRegionLock) as e:
+            except genshin.errors.RedemptionClaimed:
+                result["claimed"] += 1
+                print(f"[redeem] {code}: 이미 사용")
+            except (genshin.errors.RedemptionInvalid, genshin.errors.RedemptionRegionLock) as e:
+                result["skipped"] += 1
                 print(f"[redeem] {code}: {type(e).__name__}")
             except genshin.InvalidCookies:
                 raise
             except genshin.GenshinException as e:
                 print(f"[redeem] {code}: {e}")
-                errors.append(f"{code}: {e.msg or e}")
+                result["errors"].append(f"{code}: {e.msg or e}")
             break
+        else:
+            result["errors"].append(f"{code}: 쿨다운으로 3회 실패")
         await asyncio.sleep(REDEEM_INTERVAL)
-    return redeemed, errors
+    return result
 
 
 async def main() -> int:
@@ -120,13 +140,14 @@ async def main() -> int:
         try:
             accounts = [a for a in await client.get_game_accounts() if a.game == genshin.Game.GENSHIN]
             uid = int(env("GENSHIN_UID") or max(accounts, key=lambda a: a.level).uid)
-            redeemed, errors = await redeem_all(client, uid)
-            if redeemed:
-                lines.append("🎁 새 코드 입력:\n" + "\n".join(f"  • {r}" for r in redeemed))
-            else:
-                lines.append("🎁 새 코드 없음")
-            if errors:
-                lines.append("⚠️ 코드 오류:\n" + "\n".join(f"  • {e}" for e in errors))
+            r = await redeem_all(client, uid)
+            summary = f"🎁 코드 {r['total']}개 확인 · 새로 입력 {len(r['new'])} · 이미 사용 {r['claimed']}"
+            if r["skipped"]:
+                summary += f" · 무효/지역제한 {r['skipped']}"
+            lines.append(summary)
+            lines.extend(f"  • {n}" for n in r["new"])
+            if r["errors"]:
+                lines.append("⚠️ 코드 오류:\n" + "\n".join(f"  • {e}" for e in r["errors"]))
         except genshin.InvalidCookies:
             failed = True
             lines.append("❌ 리딤 실패: cookie_token 만료/무효 → uv run manage.py login")
