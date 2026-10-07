@@ -1,6 +1,6 @@
 # genshin-daily
 
-원신 HoYoLAB **출석체크 + 리딤 코드 자동 입력**. GitHub Actions에서 매일 07:00 KST에 실행되며 PC가 꺼져 있어도 동작한다. 결과와 쿠키 만료는 Telegram으로 알림.
+원신 HoYoLAB **출석체크 + 리딤 코드 자동 입력**. GitHub Actions에서 매일 01:30 KST에 실행되며 PC가 꺼져 있어도 동작한다. 결과와 쿠키 만료는 Telegram으로 알림.
 
 ## 동작
 
@@ -27,7 +27,7 @@
 | `checkin.py` | 출석 + 리딤 + 알림 (Actions에서 실행) |
 | `manage.py` | 로컬 관리: `.env` 갱신 → GitHub Secrets 동기화 |
 | `.env` | 쿠키/토큰 원본 (git 제외) |
-| `.github/workflows/daily.yml` | 매일 07:00 KST 실행 + 60일 무활동 비활성화 방지(keepalive) |
+| `.github/workflows/daily.yml` | 매일 01:30 KST 실행 + 60일 무활동 비활성화 방지(keepalive) |
 
 ## 처음 설정 / 쿠키 갱신
 

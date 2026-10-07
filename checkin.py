@@ -117,7 +117,7 @@ async def main() -> int:
         print(f"stoken refresh 실패: {e}")
         return 1
 
-    client = genshin.Client(cookies, game=genshin.Game.GENSHIN, region=genshin.Region.OVERSEAS)
+    client = genshin.Client(cookies, game=genshin.Game.GENSHIN, region=genshin.Region.OVERSEAS, lang="ko-kr")
 
     # 1) 출석
     try:

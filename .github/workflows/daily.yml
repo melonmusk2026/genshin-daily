@@ -2,7 +2,7 @@ name: Genshin daily
 
 on:
   schedule:
-    - cron: "0 22 * * *" # 매일 07:00 KST
+    - cron: "30 16 * * *" # 매일 01:30 KST (출석 초기화 01:00 KST 직후. Actions 지연이 몇 시간 생겨도 당일 안에 처리됨)
   workflow_dispatch:
 
 permissions: {}
